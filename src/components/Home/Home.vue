@@ -50,11 +50,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElLoading } from 'element-plus'
 import Recorder from 'js-audio-recorder';
 import * as transform from 'js-audio-recorder/src/transform/transform';
 import * as Player from 'js-audio-recorder/src/player/player';
-import { RightOutlined, LeftOutlined } from '@ant-design/icons-vue'
+import { RightOutlined, LeftOutlined } from '@ant-design/icons-vue';
+import { http } from '../../http/index.ts';
 // 定义语言和句子的JSON数据
 
 const sampleRate = ref(16000);
@@ -223,20 +224,16 @@ const uploadWAV = async () => {
         return;
     }
     const formData = new FormData();
-    formData.append('info', JSON.stringify({ category: 'audio', text: currentSentence.value }));
     const file = new File([recorder.getWAVBlob()], currentSentence.value + '.wav', { type: 'audio/wav' });
     formData.append('file', file);
     let loadingInstance;
     try {
-        loadingInstance = ElLoading.service({ target: '.container', text: 'uploading...' });
-        const response = (await http.post(`/corpus/upload_audio_file`, formData)).data;
+        loadingInstance = ElLoading.service({ target: '.home-container', text: 'uploading...' });
+        const response = (await http.post(`/upload`, formData));
+        console.log(response);
 
-        if (response) {
-            uploadFormData.value.audio_url = file.name;
-            uploadFormData.value.pinyin = response.pinyin;
-            uploadFormData.value.audio_duration = response.audio_duration;
-            uploadFormData.value.aud_id = response.aud_id;
-        }
+        ElMessage.success('Recording uploaded successfully')
+        hasRecording.value = false
     } catch (error) {
         console.error("Upload failed: ", error);
     } finally {
@@ -259,8 +256,7 @@ const toggleRecording = () => {
 }
 
 const uploadRecording = () => {
-    ElMessage.success('Recording uploaded successfully')
-    hasRecording.value = false
+    uploadWAV();
 }
 
 onMounted(() => {
