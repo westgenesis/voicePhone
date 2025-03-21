@@ -1,0 +1,175 @@
+openapi: 3.0.0
+info:
+  title: 任务管理API
+  version: 1.0.0
+  description: 用于管理任务和生成报告的API
+
+paths:
+  /test/v1/tasks/get_task_list_by_project_id:
+    post:
+      summary: 获取项目任务列表
+      description: 根据项目ID获取任务列表
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  description: 项目ID
+      responses:
+        '200':
+          description: 成功获取任务列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+
+  /test/v1/tasks/upload_generate_file:
+    post:
+      summary: 上传生成报告的文件
+      description: 上传生成报告所需的文件
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                info:
+                  type: string
+                  description: 附加信息，如分类
+                file:
+                  type: string
+                  format: binary
+                  description: 上传的文件
+      responses:
+        '200':
+          description: 文件上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file_id:
+                    type: string
+                    description: 文件ID
+
+  /test/v1/tasks/generate_report:
+    post:
+      summary: 生成报告
+      description: 根据选定的任务生成报告
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reportName:
+                  type: string
+                  description: 报告名称
+                reportNumber:
+                  type: string
+                  description: 报告编号
+                inspectionType:
+                  type: string
+                  description: 检验类别
+                inspectionConclusion:
+                  type: string
+                  description: 检验结论
+                condition:
+                  type: string
+                  description: 检验条件
+                remarks:
+                  type: string
+                  description: 备注
+                inspectionLocation:
+                  type: string
+                  description: 检验地点
+                inspectionDate:
+                  type: string
+                  format: date
+                  description: 检验日期
+                file_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: 文件ID列表
+                task_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: 任务ID列表
+                project_id:
+                  type: string
+                  description: 项目ID
+      responses:
+        '200':
+          description: 报告生成成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    description: 生成的报告信息
+
+  /test/v1/tasks/download_report:
+    get:
+      summary: 下载报告
+      description: 根据项目ID下载生成的报告
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 项目ID
+      responses:
+        '200':
+          description: 报告下载成功
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        task_id:
+          type: string
+          description: 任务ID
+        task_number:
+          type: string
+          description: 任务编号
+        task_name:
+          type: string
+          description: 任务名称
+        task_description:
+          type: string
+          description: 任务描述
+        task_status:
+          type: string
+          description: 任务状态
+        labels:
+          type: array
+          items:
+            type: string
+          description: 标签
+        cases:
+          type: array
+          items:
+            type: string
+          description: 关联用例
