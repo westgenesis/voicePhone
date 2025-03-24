@@ -49,14 +49,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import Recorder from 'js-audio-recorder';
 import * as transform from 'js-audio-recorder/src/transform/transform';
 import * as Player from 'js-audio-recorder/src/player/player';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons-vue';
 import { http } from '../../http/index.ts';
-// 定义语言和句子的JSON数据
+import languageData from './languageData.ts';
 
 const sampleRate = ref(16000);
 const sampleBit = ref(16);
@@ -66,49 +66,17 @@ const duration = ref(0);
 const fileSize = ref(0);
 const vol = ref(0);
 
-const languageData = {
-    en: {
-        label: 'English',
-        sentences: [
-            "Hello, how are you?",
-            "What is your name?",
-            "Where are you from?",
-            "How old are you?",
-            "What do you do?"
-        ]
-    },
-    es: {
-        label: 'Spanish',
-        sentences: [
-            "Hola, ¿cómo estás?",
-            "¿Cómo te llamas?",
-            "¿De dónde eres?",
-            "¿Cuántos años tienes?",
-            "¿A qué te dedicas?"
-        ]
-    },
-    fr: {
-        label: 'French',
-        sentences: [
-            "Bonjour, comment ça va?",
-            "Comment tu t'appelles?",
-            "D'où viens-tu?",
-            "Quel âge as-tu?",
-            "Que fais-tu dans la vie?"
-        ]
-    }
-}
-
-const languages = ref([
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Spanish' },
-    { value: 'fr', label: 'French' }
-])
+const languages = ref(
+    Object.entries(languageData).map(([value, lang]) => ({
+        value,
+        label: lang.label
+    }))
+);
 
 const { encodeWAV } = transform;
 let recorder = null;
 let playTimer = null;
-const selectedLanguage = ref('en')
+const selectedLanguage = ref(localStorage.getItem('selectedLanguage') || 'en') // 从 localStorage 中恢复语种
 const currentLanguage = ref('English')
 const sentences = ref<string[]>([])
 const currentIndex = ref(0)
@@ -128,13 +96,15 @@ const collectData = () => {
 const changeLanguage = () => {
     const langData = languageData[selectedLanguage.value]
     sentences.value = langData.sentences
-    currentIndex.value = 0
+    currentIndex.value = parseInt(localStorage.getItem('currentIndex')) || 0
     updateCurrentSentence()
     currentLanguage.value = langData.label
+    localStorage.setItem('selectedLanguage', selectedLanguage.value) // 保存语种到 localStorage
 }
 
 const updateCurrentSentence = () => {
     currentSentence.value = sentences.value[currentIndex.value] || ''
+    localStorage.setItem('currentIndex', currentIndex.value.toString())
 }
 
 const prevSentence = () => {
@@ -148,6 +118,12 @@ const nextSentence = () => {
     if (currentIndex.value < sentences.value.length - 1) {
         currentIndex.value++
         updateCurrentSentence()
+    } else {
+        // 全部录制完成后自动回滚到第一条语料
+        currentIndex.value = 0
+        localStorage.removeItem('currentIndex')
+        updateCurrentSentence()
+        ElMessage.success('All recordings completed. Rolling back to the first sentence.')
     }
 }
 
@@ -260,7 +236,20 @@ const uploadRecording = () => {
 }
 
 onMounted(() => {
+    // 从 localStorage 中恢复状态
+    selectedLanguage.value = localStorage.getItem('selectedLanguage') || 'en' // 恢复语种
+    currentIndex.value = parseInt(localStorage.getItem('currentIndex')) || 0
+    isRecording.value = localStorage.getItem('isRecording') === 'true'
+    hasRecording.value = localStorage.getItem('hasRecording') === 'true'
     changeLanguage()
+})
+
+// 在组件销毁前保存状态
+onBeforeUnmount(() => {
+    localStorage.setItem('selectedLanguage', selectedLanguage.value) // 保存语种
+    localStorage.setItem('currentIndex', currentIndex.value.toString())
+    localStorage.setItem('isRecording', isRecording.value.toString())
+    localStorage.setItem('hasRecording', hasRecording.value.toString())
 })
 </script>
 
