@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { http } from '../http/index.ts';
 
 const router = useRouter();
 const account = ref('');
@@ -35,30 +36,34 @@ const fixedAccounts = [
 
 const onSubmitFormData = async () => {
   const formData = {
-    account: account.value,
+    username: account.value, // 与后端参数名保持一致
     password: password.value,
-    usertype: account.value === 'admin' ? 'admin' : 'user',
   };
 
-  // 在本地验证账号密码
-  const user = fixedAccounts.find(u => u.account === formData.account && u.password === formData.password);
+  try {
+    // 发送登录请求
+    const response = await http.post('/login', formData);
 
-  if (user) {
-    window.localStorage.setItem('account', formData.account);
-    if (rememberMe.value) {
-      window.localStorage.setItem('password', formData.password);
+    if (response.status === 0) {
+      // 登录成功，保存用户信息
+      window.localStorage.setItem('account', formData.username);
+      if (rememberMe.value) {
+        window.localStorage.setItem('password', formData.password);
+      } else {
+        window.localStorage.removeItem('password');
+      }
+
+      // 跳转到首页
+      router.replace('/home');
     } else {
-      window.localStorage.removeItem('password');
+      // 登录失败，显示错误信息
+      ElMessage.error('登录失败，账号或密码错误');
     }
-    window.localStorage.setItem('account', account.value);
-    window.localStorage.setItem('token', 'fake-token');
-    window.localStorage.setItem('user_role_id', '1');
-    window.localStorage.setItem('user_id', '1');
-    router.replace('/home');
-  } else {
-    ElMessage.error('登录失败，账号或密码错误');
+  } catch (error) {
+    // 处理请求异常
+    ElMessage.error('登录失败，请检查网络或联系管理员');
   }
-}
+};
 
 onMounted(() => {
   const storedAccount = window.localStorage.getItem('account')

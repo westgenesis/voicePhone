@@ -33,7 +33,7 @@
         <!-- 正常流程部分 -->
         <div v-else class="content-area">
             <h2>{{ currentLanguage }}</h2>
-            <div class="sentence-display">
+            <div class="sentence-display" @click="showDrawer = true; console.log(111)">
                 <p>{{ currentSentence }}</p>
             </div>
             <div class="volume-indicator" v-if="isRecording">
@@ -68,6 +68,23 @@
             </a-button>
             <a-button type="primary" @click="uploadRecording" :disabled="!hasRecording" flex="1">Upload</a-button>
         </div>
+
+        <!-- 抽屉组件 -->
+        <el-drawer
+            title="Select a Sentence"
+            v-model="showDrawer"
+            direction="rtl"
+            size="60%"
+            @close="showDrawer = false"
+        >
+            <div class="drawer-content">
+                <ul>
+                    <li v-for="(sentence, index) in sentences" :key="index" @click="selectSentence(index)">
+                        {{ (index+1) + '.' + sentence }}
+                    </li>
+                </ul>
+            </div>
+        </el-drawer>
     </div>
 </template>
 
@@ -121,6 +138,9 @@ const currentSentence = ref('');
 const isRecording = ref(false);
 const hasRecording = ref(false);
 
+// 抽屉显示状态
+const showDrawer = ref(false);
+
 // 检查是否第一次登录
 const checkFirstLogin = () => {
     const isFirstLogin = localStorage.getItem('isFirstLogin');
@@ -130,27 +150,36 @@ const checkFirstLogin = () => {
 };
 
 // 提交表单
-const submitForm = () => {
+const submitForm = async () => {
     if (!userInfo.value.age || !userInfo.value.gender || !userInfo.value.region) {
         ElMessage.error('Please fill out all fields');
         return;
     }
 
-    // 保存用户信息到 localStorage
-    localStorage.setItem('userInfo', JSON.stringify(userInfo.value));
-    localStorage.setItem('isFirstLogin', 'false');
+    try {
+        // 调用后端接口提交表单数据
+        const response = await http.post('/submit-survey/', {
+            age: parseInt(userInfo.value.age), // 确保 age 是数字类型
+            gender: userInfo.value.gender,
+            region: userInfo.value.region
+        });
 
-    // 隐藏表单
-    showForm.value = false;
+        // 获取返回的 UID
+        const uid = response.uid;
 
-    // 发送用户信息到服务器（可选）
-    // http.post('/user-info', userInfo.value)
-    //     .then(() => {
-    //         ElMessage.success('User information saved successfully');
-    //     })
-    //     .catch((error) => {
-    //         console.error('Failed to save user information:', error);
-    //     });
+        // 保存 UID 到 localStorage
+        localStorage.setItem('uid', uid);
+
+        // 保存用户信息到 localStorage
+        localStorage.setItem('userInfo', JSON.stringify(userInfo.value));
+        localStorage.setItem('isFirstLogin', 'false');
+
+        // 隐藏表单
+        showForm.value = false;
+    } catch (error) {
+        console.error('Failed to save user information:', error);
+        ElMessage.error('Failed to save user information');
+    }
 };
 
 // 更改语言
@@ -243,6 +272,10 @@ const uploadWAV = async () => {
     const formData = new FormData();
     const file = new File([recorder.getWAVBlob()], currentSentence.value + '.wav', { type: 'audio/wav' });
     formData.append('file', file);
+    const info = {
+        uid: localStorage.getItem('uid')
+    }
+    formData.append('info', JSON.stringify(info));
 
     let loadingInstance;
     try {
@@ -262,6 +295,13 @@ const uploadWAV = async () => {
 // 上传录音
 const uploadRecording = () => {
     uploadWAV();
+};
+
+// 选择句子
+const selectSentence = (index: number) => {
+    currentIndex.value = index;
+    updateCurrentSentence();
+    showDrawer.value = false;
 };
 
 // 组件挂载时检查是否第一次登录
@@ -308,6 +348,7 @@ onBeforeUnmount(() => {
 .sentence-display {
     font-size: 24px;
     margin-bottom: 20px;
+    cursor: pointer; /* 添加鼠标指针样式 */
 }
 
 .sentence-counter {
@@ -354,6 +395,24 @@ onBeforeUnmount(() => {
 
     .control-buttons .el-button {
         flex: 1 0 40%;
+    }
+}
+
+.drawer-content {
+    ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #ddd;
+
+            &:hover {
+                background-color: #f0f0f0;
+            }
+        }
     }
 }
 </style>
