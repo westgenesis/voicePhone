@@ -36,21 +36,27 @@
             <div class="sentence-display" @click="showDrawer = true; console.log(111)">
                 <p>{{ currentSentence }}</p>
             </div>
-            <div class="volume-indicator" v-if="isRecording">
-                <a-progress 
-                    :percent="vol"
-                    :stroke-color="vol < 20 ? '#ff4d4f' : '#1890ff'"
-                    status="active"
-                    :show-info="false"
-                    stroke-linecap="square"
-                />
+            <canvas id="canvas" v-show="!isPaused"></canvas>
+            <div class="volume-indicator" v-if="isRecording && !isPaused">
+                <a-progress :percent="vol" :stroke-color="vol < 20 ? '#ff4d4f' : '#1890ff'" status="active"
+                    :show-info="false" stroke-linecap="square" />
                 <div class="volume-text">Current Volume: {{ vol }}%</div>
             </div>
             <div class="sentence-counter">
                 {{ currentIndex + 1 }} / {{ sentences.length }}
             </div>
         </div>
-
+        <div v-if="isRecording" class="recording-controls">
+            <a-button shape="circle" @click="togglePause" size="large"
+                :class="{ 'paused': isPaused }">
+                <el-icon :size="20" v-show="!isPaused">
+                    <PauseOutlined />
+                </el-icon>
+                <el-icon :size="20" v-show="isPaused">
+                    <CaretRightOutlined />
+                </el-icon>
+            </a-button>
+        </div>
         <!-- 控制按钮 -->
         <div v-if="!showForm" class="control-buttons" style="flex-wrap: nowrap;">
             <a-button @click="prevSentence" :disabled="currentIndex === 0" aria-label="Previous" flex="1">
@@ -61,7 +67,8 @@
             <a-button type="primary" @click="toggleRecording" flex="1">
                 {{ isRecording ? 'Stop' : 'Start' }} Recording
             </a-button>
-            <a-button @click="nextSentence" :disabled="currentIndex === sentences.length - 1" aria-label="Next" flex="1">
+            <a-button @click="nextSentence" :disabled="currentIndex === sentences.length - 1" aria-label="Next"
+                flex="1">
                 <el-icon :size="20">
                     <RightOutlined />
                 </el-icon>
@@ -70,17 +77,12 @@
         </div>
 
         <!-- 抽屉组件 -->
-        <el-drawer
-            title="Select a Sentence"
-            v-model="showDrawer"
-            direction="rtl"
-            size="60%"
-            @close="showDrawer = false"
-        >
+        <el-drawer title="Select a Sentence" v-model="showDrawer" direction="rtl" size="60%"
+            @close="showDrawer = false">
             <div class="drawer-content">
                 <ul>
                     <li v-for="(sentence, index) in sentences" :key="index" @click="selectSentence(index)">
-                        {{ (index+1) + '.' + sentence }}
+                        {{ (index + 1) + '.' + sentence }}
                     </li>
                 </ul>
             </div>
@@ -97,7 +99,12 @@ import * as Player from 'js-audio-recorder/src/player/player';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons-vue';
 import { http } from '../../http/index.ts';
 import languageData from './languageData.ts';
+import { PauseOutlined, CaretRightOutlined, StopOutlined } from '@ant-design/icons-vue';
+import { h } from 'vue';
+// 添加状态变量
+const isPaused = ref(false);
 
+const { encodeWAV } = transform;
 // 录音相关
 const sampleRate = ref(16000);
 const sampleBit = ref(16);
@@ -128,6 +135,12 @@ const showForm = ref(false);
 // 录音相关
 let recorder = null;
 let playTimer = null;
+let oCanvas = null;
+let ctx = null;
+let drawRecordId = null;
+let pCanvas = null;
+let pCtx = null;
+let drawPlayId = null;
 
 // 语言和句子相关
 const selectedLanguage = ref(localStorage.getItem('selectedLanguage') || 'en');
@@ -227,6 +240,8 @@ const startRecord = () => {
         numChannels: numChannel.value,
         compiling: compiling.value,
     };
+    oCanvas = document.getElementById('canvas');
+    ctx = oCanvas.getContext('2d');
 
     if (!recorder) {
         recorder = new Recorder(config);
@@ -244,8 +259,110 @@ const startRecord = () => {
     }, (error) => {
         console.log(`异常了,${error.name}:${error.message}`);
     });
+    config.compiling && (playTimer = setInterval(() => {
+        if (!recorder) {
+            return;
+        }
+        let newData = recorder.getNextData();
+        if (!newData.length) {
+            return;
+        }
+        let byteLength = newData[0].byteLength;
+        let buffer = new ArrayBuffer(newData.length * byteLength);
+        let dataView = new DataView(buffer);
+        for (let i = 0, iLen = newData.length; i < iLen; ++i) {
+            for (let j = 0, jLen = newData[i].byteLength; j < jLen; ++j) {
+                dataView.setInt8(i * byteLength + j, newData[i].getInt8(j));
+            }
+        }
+        let a = encodeWAV(dataView, config.sampleRate, config.sampleRate, config.numChannels, config.sampleBits);
+        let blob = new Blob([a], { type: 'audio/wav' });
+        blob.arrayBuffer().then((arraybuffer) => {
+            Player.play(arraybuffer);
+        });
+    }, 3000));
+    drawRecord();
 };
 
+const drawRecord = () => {
+    drawRecordId = requestAnimationFrame(drawRecord);
+    let dataArray = recorder.getRecordAnalyseData();
+    let bufferLength = dataArray.length;
+
+    // 清除画布
+    ctx.clearRect(0, 0, oCanvas.width, oCanvas.height);
+
+    // 设置渐变背景
+    const gradient = ctx.createLinearGradient(0, 0, 0, oCanvas.height);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, oCanvas.width, oCanvas.height);
+
+    // 设置波形样式
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    // 创建波形渐变
+    const waveGradient = ctx.createLinearGradient(0, 0, oCanvas.width, 0);
+    waveGradient.addColorStop(0, '#00b4db');
+    waveGradient.addColorStop(0.5, '#0083b0');
+    waveGradient.addColorStop(1, '#00b4db');
+    ctx.strokeStyle = waveGradient;
+
+    // 绘制波形
+    ctx.beginPath();
+    let sliceWidth = oCanvas.width * 1.0 / bufferLength;
+    let x = 0;
+    let centerY = oCanvas.height / 2;
+
+    for (let i = 0; i < bufferLength; i++) {
+        let v = dataArray[i] / 128.0;
+        let y = v * oCanvas.height / 2;
+
+        // 使用正弦函数使波形更平滑
+        let smoothY = centerY + (y - centerY) * Math.sin(Math.PI * i / bufferLength);
+
+        if (i === 0) {
+            ctx.moveTo(x, smoothY);
+        } else {
+            ctx.lineTo(x, smoothY);
+        }
+        x += sliceWidth;
+    }
+
+    ctx.stroke();
+
+    // 添加中心线
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.moveTo(0, centerY);
+    ctx.lineTo(oCanvas.width, centerY);
+    ctx.stroke();
+};
+const pauseRecord = () => {
+    if (recorder) {
+        recorder.pause();
+        console.log('暂停录音');
+        drawRecordId && cancelAnimationFrame(drawRecordId);
+        drawRecordId = null;
+    }
+};
+
+const resumeRecord = () => {
+    recorder && recorder.resume();
+    console.log('恢复录音');
+    drawRecord();
+};
+const togglePause = () => {
+
+  if (isPaused.value) {
+    resumeRecord();
+  } else {
+    pauseRecord();
+  }
+  isPaused.value = !isPaused.value;
+}
 // 停止录音
 const endRecord = () => {
     recorder && recorder.stop();
@@ -310,7 +427,6 @@ onMounted(() => {
     selectedLanguage.value = localStorage.getItem('selectedLanguage') || 'en';
     currentIndex.value = parseInt(localStorage.getItem('currentIndex')) || 0;
     isRecording.value = localStorage.getItem('isRecording') === 'true';
-    hasRecording.value = localStorage.getItem('hasRecording') === 'true';
     changeLanguage();
 });
 
@@ -319,7 +435,6 @@ onBeforeUnmount(() => {
     localStorage.setItem('selectedLanguage', selectedLanguage.value);
     localStorage.setItem('currentIndex', currentIndex.value.toString());
     localStorage.setItem('isRecording', isRecording.value.toString());
-    localStorage.setItem('hasRecording', hasRecording.value.toString());
 });
 </script>
 
@@ -334,6 +449,7 @@ onBeforeUnmount(() => {
 
 .language-selector {
     margin-bottom: 20px;
+    margin-top: 2rem;
 }
 
 .content-area {
@@ -348,7 +464,8 @@ onBeforeUnmount(() => {
 .sentence-display {
     font-size: 24px;
     margin-bottom: 20px;
-    cursor: pointer; /* 添加鼠标指针样式 */
+    cursor: pointer;
+    /* 添加鼠标指针样式 */
 }
 
 .sentence-counter {
@@ -414,5 +531,48 @@ onBeforeUnmount(() => {
             }
         }
     }
+}
+
+.recording-controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s ease-in-out;
+
+  .pause-button, .stop-button {
+    width: 60px;
+    height: 60px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: scale(1.1);
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  .pause-button {
+    &.paused {
+      background-color: #52c41a; // 播放状态变为绿色
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.recording-controls .pause-button:not(.paused) {
+  animation: pulse 2s infinite;
 }
 </style>
