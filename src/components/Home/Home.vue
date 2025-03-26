@@ -61,7 +61,7 @@
         <div v-if="!showForm" class="control-buttons" style="flex-wrap: nowrap;">
             <a-button @click="prevSentence" :disabled="currentIndex === 0" aria-label="Previous" flex="1">
                 <el-icon :size="20">
-                    <LeftOutlined />
+                    <StepBackwardOutlined />
                 </el-icon>
             </a-button>
             <a-button type="primary" @click="toggleRecording" flex="1">
@@ -70,7 +70,7 @@
             <a-button @click="nextSentence" :disabled="currentIndex === sentences.length - 1" aria-label="Next"
                 flex="1">
                 <el-icon :size="20">
-                    <RightOutlined />
+                    <StepForwardOutlined />
                 </el-icon>
             </a-button>
             <a-button type="primary" @click="uploadRecording" :disabled="!hasRecording" flex="1">Upload</a-button>
@@ -96,7 +96,7 @@ import { ElMessage, ElLoading } from 'element-plus';
 import Recorder from 'js-audio-recorder';
 import * as transform from 'js-audio-recorder/src/transform/transform';
 import * as Player from 'js-audio-recorder/src/player/player';
-import { RightOutlined, LeftOutlined } from '@ant-design/icons-vue';
+import { StepBackwardOutlined, StepForwardOutlined } from '@ant-design/icons-vue';
 import { http } from '../../http/index.ts';
 import languageData from './languageData.ts';
 import { PauseOutlined, CaretRightOutlined, StopOutlined } from '@ant-design/icons-vue';
@@ -374,6 +374,7 @@ const toggleRecording = () => {
     if (!isRecording.value) {
         hasRecording.value = true;
         endRecord();
+        isPaused.value = false;
     } else {
         startRecord();
     }
