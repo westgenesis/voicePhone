@@ -77,9 +77,12 @@
                     <StepForwardOutlined />
                 </el-icon>
             </a-button>
-            <a-button type="primary" @click="uploadRecording" :disabled="!hasRecording" flex="1">Upload</a-button>
-        </div>
 
+        </div>
+        <div v-if="!showForm" class="control-buttons" style="flex-wrap: nowrap">
+            <a-button type="primary" @click="playRecord" :disabled="!hasRecording" flex="1" style="width: 40%">Play</a-button>
+            <a-button type="primary" @click="uploadRecording" :disabled="!hasRecording" flex="1" style="width: 40%">Upload</a-button>
+        </div>
         <!-- 抽屉组件 -->
         <el-drawer title="Select a Sentence" v-model="showDrawer" direction="rtl" size="60%"
             @close="showDrawer = false">
@@ -424,6 +427,35 @@ const uploadWAV = async () => {
 // 上传录音
 const uploadRecording = () => {
     uploadWAV();
+};
+
+const drawPlay = () => {
+    drawPlayId = requestAnimationFrame(drawPlay);
+    let dataArray = recorder.getPlayAnalyseData();
+    let bufferLength = dataArray.length;
+    ctx.fillStyle = 'rgb(200, 200, 200)';
+    ctx.fillRect(0, 0, oCanvas.width, oCanvas.height);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgb(0, 0, 0)';
+    ctx.beginPath();
+    let sliceWidth = oCanvas.width * 1.0 / bufferLength;
+    let x = 0;
+    for (let i = 0; i < bufferLength; i++) {
+        let v = dataArray[i] / 128.0;
+        let y = v * oCanvas.height / 2;
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+        x += sliceWidth;
+    }
+    ctx.lineTo(oCanvas.width, oCanvas.height / 2);
+    ctx.stroke();
+};
+
+const playRecord = () => {
+    recorder && recorder.play();
 };
 
 // 选择句子
