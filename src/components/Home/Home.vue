@@ -33,8 +33,13 @@
         <!-- 正常流程部分 -->
         <div v-else class="content-area">
             <h2>{{ currentLanguage }}</h2>
-            <div class="sentence-display" @click="showDrawer = true; console.log(111)">
-                <p>{{ currentSentence }}</p>
+            <div class="sentence-display" @click="showDrawer = true">
+                <p>
+                    <el-icon v-if="uploadedSentences.includes(currentSentence)" color="#67C23A" :size="24">
+                        <CheckOutlined />
+                    </el-icon>
+                    {{ currentSentence }}
+                </p>
             </div>
             <canvas id="canvas" v-show="!isPaused"></canvas>
             <div class="volume-indicator" v-if="isRecording && !isPaused">
@@ -47,8 +52,7 @@
             </div>
         </div>
         <div v-if="isRecording" class="recording-controls">
-            <a-button shape="circle" @click="togglePause" size="large"
-                :class="{ 'paused': isPaused }">
+            <a-button shape="circle" @click="togglePause" size="large" :class="{ 'paused': isPaused }">
                 <el-icon :size="20" v-show="!isPaused">
                     <PauseOutlined />
                 </el-icon>
@@ -83,6 +87,9 @@
                 <ul>
                     <li v-for="(sentence, index) in sentences" :key="index" @click="selectSentence(index)">
                         {{ (index + 1) + '.' + sentence }}
+                        <el-icon v-if="uploadedSentences.includes(sentence)" color="#67C23A" :size="20">
+                            <CheckOutlined />
+                        </el-icon>
                     </li>
                 </ul>
             </div>
@@ -99,7 +106,7 @@ import * as Player from 'js-audio-recorder/src/player/player';
 import { StepBackwardOutlined, StepForwardOutlined } from '@ant-design/icons-vue';
 import { http } from '../../http/index.ts';
 import languageData from './languageData.ts';
-import { PauseOutlined, CaretRightOutlined, StopOutlined } from '@ant-design/icons-vue';
+import { PauseOutlined, CaretRightOutlined, StopOutlined, CheckOutlined} from '@ant-design/icons-vue';
 import { h } from 'vue';
 // 添加状态变量
 const isPaused = ref(false);
@@ -356,12 +363,12 @@ const resumeRecord = () => {
 };
 const togglePause = () => {
 
-  if (isPaused.value) {
-    resumeRecord();
-  } else {
-    pauseRecord();
-  }
-  isPaused.value = !isPaused.value;
+    if (isPaused.value) {
+        resumeRecord();
+    } else {
+        pauseRecord();
+    }
+    isPaused.value = !isPaused.value;
 }
 // 停止录音
 const endRecord = () => {
@@ -391,7 +398,8 @@ const uploadWAV = async () => {
     const file = new File([recorder.getWAVBlob()], currentSentence.value + '.wav', { type: 'audio/wav' });
     formData.append('file', file);
     const info = {
-        uid: localStorage.getItem('uid')
+        uid: localStorage.getItem('uid'),
+        text: currentSentence.value
     }
     formData.append('info', JSON.stringify(info));
 
@@ -422,13 +430,27 @@ const selectSentence = (index: number) => {
     showDrawer.value = false;
 };
 
-// 组件挂载时检查是否第一次登录
+// Add this at the top with other refs
+const uploadedSentences = ref<string[]>([]);
+
+// Add this function to fetch uploaded sentences
+const fetchUploadedSentences = async () => {
+    try {
+        const response = await http.get('/get_upload_list');
+        uploadedSentences.value = response.data.map(item => item.text);
+    } catch (error) {
+        console.error('Failed to fetch uploaded sentences:', error);
+    }
+};
+
+// Call this in onMounted
 onMounted(() => {
     checkFirstLogin();
     selectedLanguage.value = localStorage.getItem('selectedLanguage') || 'en';
     currentIndex.value = parseInt(localStorage.getItem('currentIndex')) || 0;
     isRecording.value = localStorage.getItem('isRecording') === 'true';
     changeLanguage();
+    fetchUploadedSentences(); // Add this line
 });
 
 // 组件销毁前保存状态
@@ -516,6 +538,22 @@ onBeforeUnmount(() => {
     }
 }
 
+.sentence-display {
+    font-size: 24px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    p {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+}
+
 .drawer-content {
     ul {
         list-style-type: none;
@@ -526,6 +564,9 @@ onBeforeUnmount(() => {
             padding: 10px;
             cursor: pointer;
             border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
             &:hover {
                 background-color: #f0f0f0;
@@ -535,45 +576,61 @@ onBeforeUnmount(() => {
 }
 
 .recording-controls {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 20px;
-  animation: fadeIn 0.3s ease-in-out;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease-in-out;
 
-  .pause-button, .stop-button {
-    width: 60px;
-    height: 60px;
-    transition: all 0.3s ease;
-    
-    &:hover {
-      transform: scale(1.1);
-    }
-    
-    &:active {
-      transform: scale(0.95);
-    }
-  }
+    .pause-button,
+    .stop-button {
+        width: 60px;
+        height: 60px;
+        transition: all 0.3s ease;
 
-  .pause-button {
-    &.paused {
-      background-color: #52c41a; // 播放状态变为绿色
+        &:hover {
+            transform: scale(1.1);
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
     }
-  }
+
+    .pause-button {
+        &.paused {
+            background-color: #52c41a; // 播放状态变为绿色
+        }
+    }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 .recording-controls .pause-button:not(.paused) {
-  animation: pulse 2s infinite;
+    animation: pulse 2s infinite;
 }
 </style>
