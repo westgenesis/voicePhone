@@ -413,6 +413,7 @@ const uploadWAV = async () => {
 
         ElMessage.success('Recording uploaded successfully');
         hasRecording.value = false;
+        await fetchUploadedSentences();
     } catch (error) {
         console.error("Upload failed: ", error);
     } finally {
