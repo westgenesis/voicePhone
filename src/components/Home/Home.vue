@@ -83,13 +83,13 @@
         <!-- 抽屉组件 -->
         <el-drawer title="Select a Sentence" v-model="showDrawer" direction="rtl" size="60%"
             @close="showDrawer = false">
-            <div class="drawer-content">
+            <div class="drawer-content" ref="drawerContentRef">
                 <ul>
                     <li v-for="(sentence, index) in sentences" :key="index" @click="selectSentence(index)">
-                        {{ (index + 1) + '.' + sentence }}
-                        <el-icon v-if="uploadedSentences.includes(sentence)" color="#67C23A" :size="20">
+                        <el-icon v-if="uploadedSentences.includes(sentence)" color="#67C23A" :size="18" style="margin-right: 1rem">
                             <CheckOutlined />
                         </el-icon>
+                        {{ (index + 1) + '.' + sentence }}
                     </li>
                 </ul>
             </div>
@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { ElMessage, ElLoading } from 'element-plus';
 import Recorder from 'js-audio-recorder';
 import * as transform from 'js-audio-recorder/src/transform/transform';
@@ -106,8 +106,10 @@ import * as Player from 'js-audio-recorder/src/player/player';
 import { StepBackwardOutlined, StepForwardOutlined } from '@ant-design/icons-vue';
 import { http } from '../../http/index.ts';
 import languageData from './languageData.ts';
-import { PauseOutlined, CaretRightOutlined, StopOutlined, CheckOutlined} from '@ant-design/icons-vue';
+import { PauseOutlined, CaretRightOutlined, StopOutlined, CheckOutlined } from '@ant-design/icons-vue';
 import { h } from 'vue';
+import { nextTick } from 'vue';
+
 // 添加状态变量
 const isPaused = ref(false);
 
@@ -437,7 +439,7 @@ const uploadedSentences = ref<string[]>([]);
 const fetchUploadedSentences = async () => {
     try {
         const response = await http.get('/get_upload_list');
-        uploadedSentences.value = response.data.map(item => item.text);
+        uploadedSentences.value = response.data;
     } catch (error) {
         console.error('Failed to fetch uploaded sentences:', error);
     }
@@ -458,6 +460,30 @@ onBeforeUnmount(() => {
     localStorage.setItem('selectedLanguage', selectedLanguage.value);
     localStorage.setItem('currentIndex', currentIndex.value.toString());
     localStorage.setItem('isRecording', isRecording.value.toString());
+});
+
+const drawerContentRef = ref<HTMLElement | null>(null);
+
+// Add this method to scroll to the current sentence
+const scrollToCurrentSentence = async () => {
+    await nextTick(); // Wait for the drawer to be fully rendered
+    console.log(111);
+    if (drawerContentRef.value) {
+        console.log(222);
+        const items = drawerContentRef.value.querySelectorAll('li');
+        if (items.length > currentIndex.value) {
+            items[currentIndex.value].scrollIntoView({
+                block: 'center'
+            });
+        }
+    }
+};
+
+// Watch for drawer opening to trigger scroll
+watch(showDrawer, (newVal) => {
+    if (newVal) {
+        scrollToCurrentSentence();
+    }
 });
 </script>
 
