@@ -483,7 +483,6 @@ onMounted(() => {
     checkFirstLogin();
     selectedLanguage.value = localStorage.getItem('selectedLanguage') || 'en';
     currentIndex.value = parseInt(localStorage.getItem('currentIndex')) || 0;
-    isRecording.value = localStorage.getItem('isRecording') === 'true';
     changeLanguage();
     fetchUploadedSentences(); // Add this line
 });
