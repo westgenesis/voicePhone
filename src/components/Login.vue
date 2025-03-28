@@ -20,20 +20,6 @@ const duration = ref(0);
 const fileSize = ref(0);
 const vol = ref(0);
 
-// 写死10个固定账号
-const fixedAccounts = [
-  { account: 'user1', password: '123456', usertype: 'user' },
-  { account: 'user2', password: '123456', usertype: 'user' },
-  { account: 'user3', password: '123456', usertype: 'user' },
-  { account: 'user4', password: '123456', usertype: 'user' },
-  { account: 'user5', password: '123456', usertype: 'user' },
-  { account: 'user6', password: '123456', usertype: 'user' },
-  { account: 'user7', password: '123456', usertype: 'user' },
-  { account: 'user8', password: '123456', usertype: 'user' },
-  { account: 'user9', password: '123456', usertype: 'user' },
-  { account: 'admin', password: 'admin', usertype: 'admin' },
-];
-
 const onSubmitFormData = async () => {
   const formData = {
     username: account.value, // 与后端参数名保持一致
