@@ -131,12 +131,12 @@ import languageData from './languageData.ts';
 import { PauseOutlined, CaretRightOutlined, CheckOutlined } from '@ant-design/icons-vue';
 import { nextTick } from 'vue';
 import ObsClient from 'esdk-obs-browserjs';
-
+import { OBS_CONFIG } from './ObsData';
 // Initialize OBS client
 const obsClient = new ObsClient({
-    access_key_id: 'HPUAEPSJ6KCFXW4HQF4J',
-    secret_access_key: '0kqNogkeU5KmiOl5mWxI8FPGNDlENUERESUaq3jK',
-    server: 'https://obs.cn-north-4.myhuaweicloud.com'
+    access_key_id: OBS_CONFIG.access_key_id,
+    secret_access_key: OBS_CONFIG.secret_access_key,
+    server: OBS_CONFIG.server
 });
 
 // State variables
@@ -271,8 +271,9 @@ const generateObsFilePath = (sentence: { name: string, chinese: string }) => {
         now.getFullYear(),
         String(now.getMonth() + 1).padStart(2, '0'),
         String(now.getDate()).padStart(2, '0'),
-        String(now.getHours()).padStart(2, '0'),
+        '-',
         String(now.getMinutes()).padStart(2, '0'),
+        '-',
         String(now.getSeconds()).padStart(2, '0')
     ].join('');
 
@@ -319,7 +320,7 @@ const uploadRecording = async () => {
         const arrayBuffer = await blob.arrayBuffer();
 
         const result = await obsClient.putObject({
-            Bucket: 'echo-wav',
+            Bucket: OBS_CONFIG.bucket,  // Using the config value here
             Key: fileName,
             Body: arrayBuffer,
             ContentType: 'audio/wav'
@@ -553,10 +554,10 @@ watch(showDrawer, (newVal) => {
 .language-selector {
     align-self: flex-end;
     margin-bottom: 0.5rem;
-    
+
     @media (max-width: 767px) {
         margin-bottom: 0.25rem;
-        
+
         .el-select {
             width: 150px !important;
         }
@@ -659,6 +660,7 @@ watch(showDrawer, (newVal) => {
 
     @media (min-width: 768px) {
         max-width: 600px;
+
         #canvas {
             height: 150px;
         }
@@ -750,6 +752,7 @@ watch(showDrawer, (newVal) => {
 
     @media (min-width: 768px) {
         margin-top: 1rem;
+
         button {
             width: 70px;
             height: 70px;
@@ -828,11 +831,11 @@ watch(showDrawer, (newVal) => {
 
     @media (min-width: 768px) {
         padding: 1rem;
-        
+
         ul li {
             padding: 0.75rem 1rem;
             font-size: 1rem;
-            
+
             .drawer-chinese {
                 font-size: 0.875rem;
             }
@@ -845,16 +848,17 @@ watch(showDrawer, (newVal) => {
     .el-drawer {
         width: 85% !important;
     }
-    
+
     .el-form-item__label {
         width: 80px !important;
     }
-    
+
     .el-form-item__content {
         margin-left: 80px !important;
     }
-    
-    .el-select, .el-input {
+
+    .el-select,
+    .el-input {
         width: 100% !important;
     }
 }
