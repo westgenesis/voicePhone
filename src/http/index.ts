@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 
 // 创建 Axios 实例
 const http = axios.create({
-  baseURL: process.env.NODE_ENV !== 'production' ? 'https://localhost:8080' : 'https://localhost:60080', // 设置基本的请求 URL
+  baseURL: process.env.NODE_ENV !== 'production' ? 'https://localhost:8080' : 'https://localhost:8080', // 设置基本的请求 URL
   timeout: 60000 // 设置请求超时时间
 })
 
@@ -60,10 +60,6 @@ http.interceptors.response.use(
     }
     if (error?.response?.data?.detail) {
       ElMessage.error(error?.response?.data?.detail)
-    }
-    if (error.response.status === 401) {
-      ElMessage.error('未授权，请重新登录')
-      window.location.href = '#/login'
     }
     // 处理响应错误
     return Promise.reject(error)

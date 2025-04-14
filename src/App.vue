@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import LeftMenu from './components/LeftMenu/LeftMenu.vue';
-import TopBar from './components/TopBar/TopBar.vue';
-import { useRoute } from 'vue-router';
+import Home from './components/Home/Home.vue'
 
-const route = useRoute();
-const key = computed(() => {
-  return route.name + new Date();
-})
 </script>
 
 <template>
   <div class="main">
     <div class="flex flex-1" style="overflow: hidden;">
         <div class="flex-1" style="background-color: #fff; overflow: auto;" >
-
-          <router-view :key="key"></router-view>
+          <Home></Home>
         </div>
     </div>
   </div>

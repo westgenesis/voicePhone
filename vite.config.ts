@@ -26,16 +26,6 @@ export default defineConfig({
     },
     port: 9200,
     proxy: {
-      '/dev-api/': {
-        target: 'http://192.168.1.60:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/dev-api/, ''),
-      },
-      '/static/': {
-        target: 'http://192.168.1.60:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/dev-api/, ''),
-      },
     },
   },
   optimizeDeps: {

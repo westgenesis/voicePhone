@@ -1,67 +1,48 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { http } from '../http/index.ts';
 
 const router = useRouter();
 const account = ref('');
 const password = ref('');
 const rememberMe = ref(true);
 
-let recorder = null;
-
-const sampleRate = ref(16000);
-const sampleBit = ref(16);
-const numChannel = ref(1);
-const compiling = ref(false);
-const isRecording = ref(false);
-const duration = ref(0);
-const fileSize = ref(0);
-const vol = ref(0);
+// Hardcoded credentials
+const validCredentials = {
+  username: 'admin',
+  password: '123456'
+};
 
 const onSubmitFormData = async () => {
-  const formData = {
-    username: account.value, // 与后端参数名保持一致
-    password: password.value,
-  };
-
-  try {
-    // 发送登录请求
-    const response = await http.post('/login', formData);
-
-    if (response.status === 0) {
-      // 登录成功，保存用户信息
-      window.localStorage.setItem('account', formData.username);
-      if (rememberMe.value) {
-        window.localStorage.setItem('password', formData.password);
-      } else {
-        window.localStorage.removeItem('password');
-      }
-
-      // 跳转到首页
-      router.replace('/home');
+  // Check against hardcoded credentials
+  if (account.value === validCredentials.username && password.value === validCredentials.password) {
+    // Login success
+    window.localStorage.setItem('account', account.value);
+    if (rememberMe.value) {
+      window.localStorage.setItem('password', password.value);
     } else {
-      // 登录失败，显示错误信息
-      ElMessage.error('登录失败，账号或密码错误');
+      window.localStorage.removeItem('password');
     }
-  } catch (error) {
-    // 处理请求异常
-    ElMessage.error('登录失败，请检查网络或联系管理员');
+    
+    // Redirect to home
+    router.replace('/home');
+    ElMessage.success('Login successful');
+  } else {
+    // Login failed
+    ElMessage.error('Login failed, incorrect username or password');
   }
 };
 
-onMounted(() => {
-  const storedAccount = window.localStorage.getItem('account')
-  const storedPassword = window.localStorage.getItem('password')
-  if (storedAccount) {
-    account.value = storedAccount
-  }
-  if (storedAccount && storedPassword) {
-    password.value = storedPassword
-  }
-})
-
+// Load saved credentials if they exist
+const storedAccount = window.localStorage.getItem('account');
+const storedPassword = window.localStorage.getItem('password');
+if (storedAccount) {
+  account.value = storedAccount;
+}
+if (storedAccount && storedPassword) {
+  password.value = storedPassword;
+}
 </script>
 
 <template>

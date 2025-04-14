@@ -15,28 +15,46 @@ workbook.SheetNames.forEach(sheetName => {
     // 获取表头（语种）
     const headers = jsonSheet[0];
 
-    // 遍历每一行数据
+    // 遍历每一行数据（从第二行开始）
     for (let i = 1; i < jsonSheet.length; i++) {
         const row = jsonSheet[i];
+        const chineseText = row[0]; // 第一列是中文
 
-        // 遍历每一列
-        headers.forEach((header, index) => {
-            if (header && row[index] && row[index] !== "——") { // 过滤掉内容为"——"的行
-                const { code, name } = getLanguageInfo(header);
+        // 如果中文为空或为"——"，跳过这行
+        if (!chineseText || chineseText === "——") continue;
 
-                if (!languageData[code]) {
-                    languageData[code] = {
-                        label: name, // 使用语言名称
-                        sentences: []
-                    };
-                }
+        // 遍历其他列（从第二列开始）
+        for (let j = 1; j < headers.length; j++) {
+            const header = headers[j];
+            const foreignText = row[j];
 
-                // 去重：如果句子不存在于数组中，才添加
-                if (!languageData[code].sentences.includes(row[index])) {
-                    languageData[code].sentences.push(row[index]);
-                }
+            // 如果外语内容为空或为"——"，跳过
+            if (!header || !foreignText || foreignText === "——") continue;
+
+            const { code, name } = getLanguageInfo(header);
+
+            if (!languageData[code]) {
+                languageData[code] = {
+                    label: name, // 使用语言名称
+                    sentences: []
+                };
             }
-        });
+
+            // 创建句子对象
+            const sentenceObj = {
+                name: foreignText,
+                chinese: chineseText
+            };
+
+            // 去重：检查是否已存在相同的句子
+            const exists = languageData[code].sentences.some(
+                item => item.name === foreignText && item.chinese === chineseText
+            );
+            
+            if (!exists) {
+                languageData[code].sentences.push(sentenceObj);
+            }
+        }
     }
 });
 
