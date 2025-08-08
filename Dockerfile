@@ -4,13 +4,16 @@ FROM dockerproxy.com/library/node:18-alpine AS build
 # 设置工作目录
 WORKDIR /app
 
+# 安装 pnpm（推荐全局安装）
+RUN npm install -g pnpm
+
 # 拷贝依赖文件并安装依赖
-COPY package*.json ./
-RUN npm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # 拷贝源码并构建
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # ========== 运行阶段 ==========
 FROM dockerproxy.com/library/nginx:alpine
