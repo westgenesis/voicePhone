@@ -1,0 +1,13 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voice-phone
+    ports:
+      - "8100:80" # 本地 8100 → 容器 nginx 80
+      - "8101:443" # 本地 8101 → 容器 nginx 443
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./cert:/etc/nginx/certs:ro
+    restart: always
